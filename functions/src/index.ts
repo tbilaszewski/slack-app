@@ -4,7 +4,12 @@ import functions = require('firebase-functions');
 admin.initializeApp(functions.config().firebase);
 //let db = admin.firestore();
 
-exports.quotes = functions.https.onRequest(async (req, response) => {
+enum UserResponse {
+  Accept = "accept",
+  Cancel = "cancel"
+}
+
+exports.quotes = functions.https.onRequest(async (request, response) => {
 
 
   return response.contentType("json").status(200).send({
@@ -13,14 +18,17 @@ exports.quotes = functions.https.onRequest(async (req, response) => {
   });
 });
 
-exports.addQuote = functions.https.onRequest((req, response) => {
+exports.quoteRequest = functions.https.onRequest(({ body: requestBody }, response) => {
 
-  const text: string = req.body.text;
-  const user_id: string = req.body.user_id;
-  const [author, ...quote] = text ? text.split(' ') : Array(2).fill('');
+  const text: string = requestBody.text;
+  const user_id: string = requestBody.user_id;
+  let [author, ...quoteInput] = text ? text.split(" ") : Array(2).fill(" ");
+  const quote = quoteInput.join(" ").replace(/"/g, "");
 
   return response.contentType("json").status(200).send({
     "text": "Próbujesz dodać cytat",
+    "Content-type": "application/json",
+    "response_type": "ephemeral",
     "attachments": [
       {
         "title": "Autor",
@@ -28,28 +36,77 @@ exports.addQuote = functions.https.onRequest((req, response) => {
       },
       {
         "title": "Cytat",
-        "text": `"${quote.join(' ').replace(/"/g, "")}"`
+        "text": quote
       },
       {
         "title": `<@${user_id}>, czy przyrzekasz, że powyższy cytat jest prawdziwy i nie spowoduje zanieczyszczenia bazy?`,
-        "callback_id": "slack-app-add-quote",
+        "callback_id": "addQuote",
         "color": "#3AA3E3",
         "attachment_type": "default",
         "actions": [
           {
-            "name": "accept",
-            "text": "Przyrzekam, dodaj",
+            "name": UserResponse.Accept,
+            "text": "Przyrzekam, dodaj :ricardomilos: ",
             "type": "button",
-            "value": "accept"
+            "value": JSON.stringify({
+              "author": author,
+              "quote": quote
+            }),
+            "style" : "primary"
           },
           {
-            "name": "cancel",
-            "text": "Odrzuć",
+            "name": UserResponse.Cancel,
+            "text": "Odrzuć :mikecry: ",
             "type": "button",
-            "value": "cancel"
+            "value": "cancel",
+            "style" : "danger"
           }
         ]
       }
     ]
   });
 });
+
+
+exports.addQuote = functions.https.onRequest(({ body: requestBody }, response) => {
+  const payload = JSON.parse(requestBody.payload);
+  return response.contentType("json").status(200).send(prepareResponse(payload));
+});
+interface SlackResponse {
+  text?: string,
+  attachments?: Array<Object>,
+  "Content-type"?: string,
+  response_type?: string,
+  delete_original?: string,
+  replace_original?: string
+}
+
+function prepareResponse(payload) : SlackResponse {
+  const { type, actions, callback_id, user } = payload;
+
+  if (type === "interactive_message" && callback_id === "addQuote" && actions.length > 0) {
+    const { name, value} = actions[actions.length - 1];
+    switch (name) {
+      case UserResponse.Accept:
+        const  valueObject = JSON.parse(value);
+        return {
+          "Content-type": "application/json",
+          // "response_type": "ephemeral",
+          "replace_original": "true",
+          "text": `<@${user.id}> dodał nowy cytat  *${valueObject.author}*: _"${valueObject.quote}"_`
+        };
+      default:
+      case UserResponse.Cancel:
+        return {
+          "Content-type": "application/json",
+          "delete_original": "true"
+        };
+    }
+  } else {
+    return  {
+      "Content-type": "application/json",
+      "replace_original": "true",
+      "text": "Coś poszło nie tak :("
+    };
+  }
+}

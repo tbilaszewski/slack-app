@@ -2,13 +2,13 @@
   "compilerOptions": {
     "lib" : ["es6", "dom"],
     "module": "commonjs",
-    "noImplicitReturns": true,
-    "noUnusedLocals": true,
+    "noImplicitReturns": false,
+    "noUnusedLocals": false,
     "outDir": "lib",
     "sourceMap": true,
-    "strict": true,
+    "strict": false,
     "target": "es6",
-    "skipLibCheck": true,
+    "skipLibCheck": false,
     "typeRoots": [
       "./functions/node_modules/@types"
     ],

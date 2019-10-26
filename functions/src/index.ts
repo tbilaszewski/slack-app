@@ -1,8 +1,7 @@
-import admin = require('firebase-admin');
 import functions = require('firebase-functions');
 
-admin.initializeApp(functions.config().firebase);
-//let db = admin.firestore();
+import { addQuoteToDB } from './database'
+const moment = require('moment');
 
 enum UserResponse {
   Accept = "accept",
@@ -22,7 +21,7 @@ exports.quoteRequest = functions.https.onRequest(({ body: requestBody }, respons
 
   const text: string = requestBody.text;
   const user_id: string = requestBody.user_id;
-  let [author, ...quoteInput] = text ? text.split(" ") : Array(2).fill(" ");
+  const [author, ...quoteInput] = text ? text.split(" ") : Array(2).fill(" ");
   const quote = quoteInput.join(" ").replace(/"/g, "");
 
   return response.contentType("json").status(200).send({
@@ -52,14 +51,14 @@ exports.quoteRequest = functions.https.onRequest(({ body: requestBody }, respons
               "author": author,
               "quote": quote
             }),
-            "style" : "primary"
+            "style": "primary"
           },
           {
             "name": UserResponse.Cancel,
             "text": "Odrzuć :mikecry: ",
             "type": "button",
             "value": "cancel",
-            "style" : "danger"
+            "style": "danger"
           }
         ]
       }
@@ -70,7 +69,8 @@ exports.quoteRequest = functions.https.onRequest(({ body: requestBody }, respons
 
 exports.addQuote = functions.https.onRequest(({ body: requestBody }, response) => {
   const payload = JSON.parse(requestBody.payload);
-  return response.contentType("json").status(200).send(prepareResponse(payload));
+  response.contentType("json").status(200).send(prepareResponse(payload));
+  addQuoteToDB({ author: 'Tomasz', quote: 'yhyyyymmmm', date: Date.now()}).catch(err => console.log(err));
 });
 interface SlackResponse {
   text?: string,
@@ -81,19 +81,19 @@ interface SlackResponse {
   replace_original?: string
 }
 
-function prepareResponse(payload) : SlackResponse {
+function prepareResponse(payload): SlackResponse {
   const { type, actions, callback_id, user } = payload;
 
   if (type === "interactive_message" && callback_id === "addQuote" && actions.length > 0) {
-    const { name, value} = actions[actions.length - 1];
+    const { name, value } = actions[actions.length - 1];
     switch (name) {
       case UserResponse.Accept:
-        const  valueObject = JSON.parse(value);
+        const valueObject = JSON.parse(value);
         return {
           "Content-type": "application/json",
           // "response_type": "ephemeral",
           "replace_original": "true",
-          "text": `<@${user.id}> dodał nowy cytat  *${valueObject.author}*: _"${valueObject.quote}"_`
+          "text": `<@${user.id}> dodaje nowy cytat  *${valueObject.author}*: _"${valueObject.quote}"_`
         };
       default:
       case UserResponse.Cancel:
@@ -103,7 +103,7 @@ function prepareResponse(payload) : SlackResponse {
         };
     }
   } else {
-    return  {
+    return {
       "Content-type": "application/json",
       "replace_original": "true",
       "text": "Coś poszło nie tak :("

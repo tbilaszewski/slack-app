@@ -12,6 +12,7 @@
     "typeRoots": [
       "./functions/node_modules/@types"
     ],
+    "strictNullChecks": false
   },
   "compileOnSave": true,
   "include": [

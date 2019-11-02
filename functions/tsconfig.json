@@ -12,7 +12,8 @@
     "typeRoots": [
       "./functions/node_modules/@types"
     ],
-    "strictNullChecks": false
+    "strictNullChecks": false,
+    "resolveJsonModule": true
   },
   "compileOnSave": true,
   "include": [

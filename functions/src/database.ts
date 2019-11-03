@@ -3,14 +3,13 @@ const COLLECTION_NAME = 'quotes';
 const admin = require('firebase-admin');
 const request = require('request')
 
-import serviceAccount = require('./slack-app-quotes-0b685d8685f7.json');
-import { user } from 'firebase-functions/lib/providers/auth';
+import serviceAccount = require('../perms/slack-app-quotes-0b685d8685f7.json');
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
 
-let db = admin.firestore();
+const db = admin.firestore();
 
 
 export interface QuoteData {
@@ -36,7 +35,6 @@ export function getQuoteFromDB({ user_id, text: author, response_url }): void {
   if (author.trim()) {
     db.collection(COLLECTION_NAME).where('author', '==', author.trim()).get()
       .then(quoteData => {
-        let quote: QuoteData;
         console.log(`author=${author}`);
         if (quoteData.empty) {
           request.post(response_url, {
@@ -85,7 +83,6 @@ export function getQuoteFromDB({ user_id, text: author, response_url }): void {
   } else {
     db.collection(COLLECTION_NAME).get()
       .then(quoteData => {
-        let quote: QuoteData;
         const random = Math.round(Math.random() * (quoteData.size - 1));
         console.log(`random num = ${random}`)
         let iter = 0;

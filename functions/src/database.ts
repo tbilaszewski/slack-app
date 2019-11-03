@@ -4,6 +4,7 @@ const admin = require('firebase-admin');
 const request = require('request')
 
 import serviceAccount = require('../perms/slack-app-quotes-0b685d8685f7.json');
+import { authenticate } from './authentications';
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
@@ -21,6 +22,9 @@ export interface QuoteData {
 
 export function addQuoteToDB(quote: QuoteData): boolean {
   let result;
+  if(!quote.author.trim() || !quote.quote.trim()) {
+    return false;
+  }
   db.collection(COLLECTION_NAME).add(quote).then(ref => {
     console.log('Added document with ID: ', ref.id);
     result = true;
@@ -31,70 +35,33 @@ export function addQuoteToDB(quote: QuoteData): boolean {
   return result;
 }
 
-export function getQuoteFromDB({ user_id, text: author, response_url }): void {
-  if (author.trim()) {
-    db.collection(COLLECTION_NAME).where('author', '==', author.trim()).get()
-      .then(quoteData => {
-        console.log(`author=${author}`);
-        if (quoteData.empty) {
-          request.post(response_url, {
-            json: {
-              "response_type": "ephemeral",
-              "replace_original": "true",
-              "text": `Nie znaleziono cytatów dla *${author}*`,
-              "attachments": [{
-                "text": `wywołał <@${user_id}>`
-              }]
-            }
-          }, (err, res, body) => {
-            if (err) {
-              console.error(err)
-              return err;
-            }
-          });
-          return null;
+export function getQuoteFromDB(req): void {
+  const { user_id, text: author, response_url } = req.body;
+  if (!authenticate(req) ) {
+    request.post(response_url, {
+      json: {
+        "text": "Nieautoryzowana próba",
+        "Content-type": "application/json",
+        "response_type": "ephemeral",
+      }
+    }
+      , (err, res, body) => {
+        if (err) {
+          console.error(err)
+          return err;
         }
-        const random = Math.round(Math.random() * (quoteData.size - 1));
-        let iter = 0;
-        quoteData.forEach(doc => {
-          if (iter++ === random) {
-            const data = doc.data();
-            request.post(response_url, {
-              json: {
-                "response_type": "ephemeral",
-                "replace_original": "true",
-                "text": `*${data.author}*: _"${data.quote}"_`,
-                "attachments": [{
-                  "text": `wywołał <@${user_id}>`
-                }]
-              }
-            }, (err, res, body) => {
-              if (err) {
-                console.error(err)
-                return err;
-              }
-            });
-          }
-        });
-      })
-      .catch(err => {
-        console.log('Error getting documents', err);
       });
   } else {
-    db.collection(COLLECTION_NAME).get()
-      .then(quoteData => {
-        const random = Math.round(Math.random() * (quoteData.size - 1));
-        console.log(`random num = ${random}`)
-        let iter = 0;
-        quoteData.forEach(doc => {
-          console.log(`found doc ${doc.id} author=${JSON.stringify(doc.data())}`);
-          if (iter++ === random) {
-            const data = doc.data();
+    if (author.trim()) {
+      db.collection(COLLECTION_NAME).where('author', '==', author.trim()).get()
+        .then(quoteData => {
+          console.log(`author=${author}`);
+          if (quoteData.empty) {
             request.post(response_url, {
               json: {
                 "response_type": "ephemeral",
                 "replace_original": "true",
-                "text": `*${data.author}*: _"${data.quote}"_`,
+                "text": `Nie znaleziono cytatów dla *${author}*`,
                 "attachments": [{
                   "text": `wywołał <@${user_id}>`
                 }]
@@ -105,12 +72,66 @@ export function getQuoteFromDB({ user_id, text: author, response_url }): void {
                 return err;
               }
             });
+            return null;
           }
+          const random = Math.round(Math.random() * (quoteData.size - 1));
+          let iter = 0;
+          quoteData.forEach(doc => {
+            if (iter++ === random) {
+              const data = doc.data();
+              request.post(response_url, {
+                json: {
+                  "response_type": "ephemeral",
+                  "replace_original": "true",
+                  "text": `*${data.author}*: _"${data.quote}"_`,
+                  "attachments": [{
+                    "text": `wywołał <@${user_id}>`
+                  }]
+                }
+              }, (err, res, body) => {
+                if (err) {
+                  console.error(err)
+                  return err;
+                }
+              });
+            }
+          });
+        })
+        .catch(err => {
+          console.log('Error getting documents', err);
         });
-      })
-      .catch(err => {
-        console.log('Error getting documents', err);
-      });
+    } else {
+      db.collection(COLLECTION_NAME).get()
+        .then(quoteData => {
+          const random = Math.round(Math.random() * (quoteData.size - 1));
+          console.log(`random num = ${random}`)
+          let iter = 0;
+          quoteData.forEach(doc => {
+            console.log(`found doc ${doc.id} author=${JSON.stringify(doc.data())}`);
+            if (iter++ === random) {
+              const data = doc.data();
+              request.post(response_url, {
+                json: {
+                  "response_type": "ephemeral",
+                  "replace_original": "true",
+                  "text": `*${data.author}*: _"${data.quote}"_`,
+                  "attachments": [{
+                    "text": `wywołał <@${user_id}>`
+                  }]
+                }
+              }, (err, res, body) => {
+                if (err) {
+                  console.error(err)
+                  return err;
+                }
+              });
+            }
+          });
+        })
+        .catch(err => {
+          console.log('Error getting documents', err);
+        });
+    }
   }
 }
 

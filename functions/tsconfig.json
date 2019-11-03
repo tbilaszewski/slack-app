@@ -1,22 +1,22 @@
 {
   "compilerOptions": {
-    "lib" : ["es6", "dom"],
     "module": "commonjs",
     "noImplicitReturns": false,
     "noUnusedLocals": false,
     "outDir": "lib",
     "sourceMap": true,
     "strict": false,
-    "target": "es6",
-    "skipLibCheck": false,
-    "typeRoots": [
-      "./functions/node_modules/@types"
-    ],
+    "target": "es2017",
+    "resolveJsonModule": true,
     "strictNullChecks": false,
-    "resolveJsonModule": true
   },
+  "skipLibCheck": false,
+  "typeRoots": [
+    "./functions/node_modules/@types"
+  ],
   "compileOnSave": true,
   "include": [
     "src"
-  ]
+  ],
+  
 }

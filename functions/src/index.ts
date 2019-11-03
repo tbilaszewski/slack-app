@@ -1,19 +1,19 @@
 import functions = require('firebase-functions');
 
-import { addQuoteToDB } from './database'
-const moment = require('moment');
+import { addQuoteToDB, getQuoteFromDB, QuoteData } from './database'
 
 enum UserResponse {
   Accept = "accept",
-  Cancel = "cancel"
+  Cancel = "cancel",
+  WrongInput = "wrongInput"
 }
 
-exports.quotes = functions.https.onRequest(async (request, response) => {
-
-
+exports.quotes = functions.https.onRequest(async ({ body: requestBody }, response) => {
+  getQuoteFromDB(requestBody);
+  const text = "przygotowuję cytat, może to trochę potrwać...";
   return response.contentType("json").status(200).send({
     "response_type": "ephemeral",
-    "text": "in construction..."
+    "text": text
   });
 });
 
@@ -69,8 +69,11 @@ exports.quoteRequest = functions.https.onRequest(({ body: requestBody }, respons
 
 exports.addQuote = functions.https.onRequest(({ body: requestBody }, response) => {
   const payload = JSON.parse(requestBody.payload);
+  const quote = prepareQuote(payload);
+  if (quote) {
+    addQuoteToDB(quote);
+  }
   response.contentType("json").status(200).send(prepareResponse(payload));
-  addQuoteToDB({ author: 'Tomasz', quote: 'yhyyyymmmm', date: Date.now()}).catch(err => console.log(err));
 });
 interface SlackResponse {
   text?: string,
@@ -81,25 +84,55 @@ interface SlackResponse {
   replace_original?: string
 }
 
+function prepareQuote(payload): QuoteData | null {
+  if (!payload) {
+    return null;
+  }
+  const { actions, user } = payload;
+  const { length, [length - 1]: lastAction } = actions;
+  const { name: reason, value } = lastAction;
+  if (reason !== UserResponse.Accept) {
+    return null;
+  }
+  const valueObject = JSON.parse(value);
+
+  return {
+    author: valueObject.author,
+    quote: valueObject.quote,
+    addedDate: Date.now(),
+    addedby: user
+  };
+}
+
 function prepareResponse(payload): SlackResponse {
   const { type, actions, callback_id, user } = payload;
 
   if (type === "interactive_message" && callback_id === "addQuote" && actions.length > 0) {
-    const { name, value } = actions[actions.length - 1];
-    switch (name) {
+    let { name: reason, value } = actions[actions.length - 1];
+    const valueObject = JSON.parse(value);
+    if (!valueObject.author.trim() || !valueObject.quote.trim()) {
+      reason = UserResponse.WrongInput;
+    }
+    switch (reason) {
       case UserResponse.Accept:
-        const valueObject = JSON.parse(value);
         return {
           "Content-type": "application/json",
-          // "response_type": "ephemeral",
+          "response_type": "in_channel",
           "replace_original": "true",
           "text": `<@${user.id}> dodaje nowy cytat  *${valueObject.author}*: _"${valueObject.quote}"_`
         };
-      default:
       case UserResponse.Cancel:
         return {
           "Content-type": "application/json",
           "delete_original": "true"
+        };
+      default:
+      case UserResponse.WrongInput:
+        return {
+          "Content-type": "application/json",
+          "replace_original": "true",
+          "response_type": "ephemeral",
+          "text": "Nie podałeś autora i/lub cytatu"
         };
     }
   } else {

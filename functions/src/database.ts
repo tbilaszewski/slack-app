@@ -1,8 +1,10 @@
 const COLLECTION_NAME = 'quotes';
 
 const admin = require('firebase-admin');
+const request = require('request')
 
-import  serviceAccount = require('./slack-app-quotes-0b685d8685f7.json');
+import serviceAccount = require('./slack-app-quotes-0b685d8685f7.json');
+import { user } from 'firebase-functions/lib/providers/auth';
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
@@ -11,10 +13,11 @@ admin.initializeApp({
 let db = admin.firestore();
 
 
-interface QuoteData {
+export interface QuoteData {
   author: string,
   quote: string,
-  addedDate: number
+  addedDate: number,
+  addedby: object
 }
 
 export function addQuoteToDB(quote: QuoteData): boolean {
@@ -22,10 +25,95 @@ export function addQuoteToDB(quote: QuoteData): boolean {
   db.collection(COLLECTION_NAME).add(quote).then(ref => {
     console.log('Added document with ID: ', ref.id);
     result = true;
-  }).catch(err =>{
+  }).catch(err => {
     console.log(err);
     result = false;
   });
   return result;
+}
+
+export function getQuoteFromDB({ user_id, text: author, response_url }): void {
+  if (author.trim()) {
+    db.collection(COLLECTION_NAME).where('author', '==', author.trim()).get()
+      .then(quoteData => {
+        let quote: QuoteData;
+        console.log(`author=${author}`);
+        if (quoteData.empty) {
+          request.post(response_url, {
+            json: {
+              "response_type": "ephemeral",
+              "replace_original": "true",
+              "text": `Nie znaleziono cytatów dla *${author}*`,
+              "attachments": [{
+                "text": `wywołał <@${user_id}>`
+              }]
+            }
+          }, (err, res, body) => {
+            if (err) {
+              console.error(err)
+              return err;
+            }
+          });
+          return null;
+        }
+        const random = Math.round(Math.random() * (quoteData.size - 1));
+        let iter = 0;
+        quoteData.forEach(doc => {
+          if (iter++ === random) {
+            const data = doc.data();
+            request.post(response_url, {
+              json: {
+                "response_type": "ephemeral",
+                "replace_original": "true",
+                "text": `*${data.author}*: _"${data.quote}"_`,
+                "attachments": [{
+                  "text": `wywołał <@${user_id}>`
+                }]
+              }
+            }, (err, res, body) => {
+              if (err) {
+                console.error(err)
+                return err;
+              }
+            });
+          }
+        });
+      })
+      .catch(err => {
+        console.log('Error getting documents', err);
+      });
+  } else {
+    db.collection(COLLECTION_NAME).get()
+      .then(quoteData => {
+        let quote: QuoteData;
+        const random = Math.round(Math.random() * (quoteData.size - 1));
+        console.log(`random num = ${random}`)
+        let iter = 0;
+        quoteData.forEach(doc => {
+          console.log(`found doc ${doc.id} author=${JSON.stringify(doc.data())}`);
+          if (iter++ === random) {
+            const data = doc.data();
+            request.post(response_url, {
+              json: {
+                "response_type": "ephemeral",
+                "replace_original": "true",
+                "text": `*${data.author}*: _"${data.quote}"_`,
+                "attachments": [{
+                  "text": `wywołał <@${user_id}>`
+                }]
+              }
+            }, (err, res, body) => {
+              if (err) {
+                console.error(err)
+                return err;
+              }
+            });
+          }
+        });
+      })
+      .catch(err => {
+        console.log('Error getting documents', err);
+      });
+  }
 }
 

@@ -81,7 +81,7 @@ export function getQuoteFromDB(req): void {
               const data = doc.data();
               request.post(response_url, {
                 json: {
-                  "response_type": "ephemeral",
+                  "response_type": "in_channel",
                   "replace_original": "true",
                   "text": `*${data.author}*: _"${data.quote}"_`,
                   "attachments": [{
@@ -112,7 +112,7 @@ export function getQuoteFromDB(req): void {
               const data = doc.data();
               request.post(response_url, {
                 json: {
-                  "response_type": "ephemeral",
+                  "response_type": "in_channel",
                   "replace_original": "true",
                   "text": `*${data.author}*: _"${data.quote}"_`,
                   "attachments": [{

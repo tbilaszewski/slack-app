@@ -3,11 +3,11 @@ const COLLECTION_NAME = 'quotes';
 const admin = require('firebase-admin');
 const request = require('request')
 
-import serviceAccount = require('../perms/slack-app-quotes-firebase-adminsdk-52gpv-7c4bed10c5.json');
-import { authenticate } from './config/authentications';
+import env from './config/env';
+import { authenticate } from './config/auth';
 
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
+  credential: admin.credential.cert(env.firebase)
 });
 
 const db = admin.firestore();

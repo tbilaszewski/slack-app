@@ -1,6 +1,6 @@
 import functions = require('firebase-functions');
 import { addQuoteToDB, getQuoteFromDB, QuoteData } from './database';
-import { authenticate } from './config/authentications';
+import { authenticate } from './config/auth';
 
 enum UserResponse {
   Accept = "accept",

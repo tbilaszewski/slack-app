@@ -9,15 +9,10 @@
     "target": "es2017",
     "resolveJsonModule": true,
     "strictNullChecks": false,
-    "lib": ["esnext.asynciterable"] 
+    "lib": ["esnext.asynciterable"]
   },
   "skipLibCheck": false,
-  "typeRoots": [
-    "./functions/node_modules/@types"
-  ],
+  "typeRoots": ["./functions/node_modules/@types"],
   "compileOnSave": true,
-  "include": [
-    "src"
-  ],
-  
+  "include": ["src"]
 }

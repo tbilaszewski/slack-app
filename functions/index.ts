@@ -73,7 +73,6 @@ exports.quoteRequest = functions.https.onRequest((req, response) => {
       ]
     });
   }
-
 });
 
 

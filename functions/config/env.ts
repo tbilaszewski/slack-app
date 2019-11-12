@@ -5,7 +5,7 @@ dotenv.config({ path: resolve('../.env') });
 
 export default {
   slack: {
-    slackSigningSecret: process.env.SLACK_SIGNING_SECRET
+    signingSecret: process.env.SLACK_SIGNING_SECRET
   },
   firebase: {
     type: process.env.TYPE,

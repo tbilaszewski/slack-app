@@ -1,7 +1,7 @@
 const COLLECTION_NAME = 'quotes';
 
 const admin = require('firebase-admin');
-const request = require('request')
+const request = require('request');
 
 import env from './config/env';
 import { authenticate } from './config/auth';
@@ -133,4 +133,3 @@ export function getQuoteFromDB(req): void {
     }
   }
 }
-

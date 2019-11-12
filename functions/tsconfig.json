@@ -6,7 +6,7 @@
     "outDir": "lib",
     "sourceMap": true,
     "strict": false,
-    "target": "es2017",
+    "target": "es2015",
     "resolveJsonModule": true,
     "strictNullChecks": false,
     "lib": ["esnext.asynciterable"]
@@ -14,5 +14,14 @@
   "skipLibCheck": false,
   "typeRoots": ["./functions/node_modules/@types"],
   "compileOnSave": true,
-  "include": ["src"]
+  "include": [
+    "config",
+    "controllers",
+    "managers",
+    "routers",
+    "util",
+    "index.ts",
+    "database.ts"
+  ],
+  "exclude": ["lib", "node_modules", "perms", "**/*.json"]
 }

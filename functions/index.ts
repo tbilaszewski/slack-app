@@ -1,6 +1,6 @@
-import functions = require('firebase-functions');
+import { https } from 'firebase-functions';
 import { addQuoteToDB, getQuoteFromDB, QuoteData } from './database';
-import { authenticate } from './authentications';
+import { authenticate } from './config/auth';
 
 enum UserResponse {
   Accept = "accept",
@@ -8,7 +8,7 @@ enum UserResponse {
   WrongInput = "wrongInput"
 }
 
-exports.quotes = functions.https.onRequest((req, response) => {
+export const quotes = https.onRequest((req, response) => {
   getQuoteFromDB(req);
   const text = "przygotowuję cytat, może to trochę potrwać...";
 
@@ -18,7 +18,7 @@ exports.quotes = functions.https.onRequest((req, response) => {
   });
 });
 
-exports.quoteRequest = functions.https.onRequest((req, response) => {
+export const quoteRequest = https.onRequest((req, response) => {
   const { body: requestBody } = req;
   const text: string = requestBody.text;
   const user_id: string = requestBody.user_id;
@@ -73,11 +73,9 @@ exports.quoteRequest = functions.https.onRequest((req, response) => {
       ]
     });
   }
-
 });
 
-
-exports.addQuote = functions.https.onRequest(({ body: requestBody }, response) => {
+export const addQuote = https.onRequest(({ body: requestBody }, response) => {
   const payload = JSON.parse(requestBody.payload);
   const quote = prepareQuote(payload);
   if (quote && quote.author && quote.quote) {

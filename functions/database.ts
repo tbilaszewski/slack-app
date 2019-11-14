@@ -1,17 +1,16 @@
 const COLLECTION_NAME = 'quotes';
 
 const admin = require('firebase-admin');
-const request = require('request')
+const request = require('request');
 
-import serviceAccount = require('../perms/slack-app-quotes-0b685d8685f7.json');
-import { authenticate } from './authentications';
+import env from './config/env';
+import { authenticate } from './config/auth';
 
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
+  credential: admin.credential.cert(env.firebase)
 });
 
 const db = admin.firestore();
-
 
 export interface QuoteData {
   author: string,
@@ -134,4 +133,3 @@ export function getQuoteFromDB(req): void {
     }
   }
 }
-

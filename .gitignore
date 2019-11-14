@@ -67,3 +67,6 @@ lib/
 
 # dotenv environment variables file
 .env
+
+# visual studio code
+.vscode

@@ -17,8 +17,7 @@ export function authenticate(req): boolean {
 function checkDateValidity(req): boolean {
   const timestamp = req.headers['x-slack-request-timestamp'];
   const now = Math.ceil(Date.now() / 1000);
-  console.log('now:'+now);
-  console.log('nowtimestamp:'+timestamp);
+
   if (Math.abs(now - timestamp) > 60) {
     return false;
   } else {

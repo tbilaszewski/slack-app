@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const SECRET: string = String(process.env.SLACK_SIGNING_SECRET);
 
 export function authenticate(req): boolean {
-  return true;
+  //return true;
   let requestBody = qs.stringify(req.body, { format: 'RFC1738' });
   let timestamp = req.headers['x-slack-request-timestamp'];
   const sig_basestring = 'v0:' + timestamp + ':' + requestBody;

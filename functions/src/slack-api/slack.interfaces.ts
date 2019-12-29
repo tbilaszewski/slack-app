@@ -20,7 +20,7 @@ interface RequestBody {
 
 interface Payload {
   actions: Array<Action>;
-  user: string,
+  user: User,
   type: string; 
   callback_id: string;
 }
@@ -28,6 +28,10 @@ interface Payload {
 interface Action {
   name: string,
   value: string
+}
+
+interface User {
+  id: string
 }
 
 

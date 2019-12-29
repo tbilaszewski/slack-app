@@ -1,8 +1,11 @@
 import { RequestObject, ResponseObject } from '../slack-api/slack.interfaces';
 import { QuoteData } from './interfaces/quotes.interface';
 import { DatabaseService } from './quotes.service';
+import { loadData } from './events';
 
 const axios = require('axios');
+
+const request = require('request');
 
 enum UserResponse {
   Accept = "accept",
@@ -17,8 +20,11 @@ export default class QuoteController {
   private response_url: String;
   private payload: RequestObject['body']['payload'];
   private dbService: DatabaseService;
+  private req;
 
-  constructor({ body }: RequestObject) {
+  constructor({ body } :RequestObject) {
+    this.req = body;
+    console.log(JSON.stringify(body))
     const { text } = body;
     const [author, ...quotesArray] = text ? text.split(" ") : Array(2).fill(null);
     this.author = author;
@@ -30,8 +36,14 @@ export default class QuoteController {
   }
 
   public getQuote() {
-    const doc = this.getRandomDocument();
-    this.sendResponse(doc);
+    console.log('QuoteController.getQuote()')
+    this.dbService.prepareQuoteDocument();
+    loadData.once('finished', () => {
+      const document = this.dbService.getuQoteDocument();
+      const message = this.formatResponseMessage(document);
+      console.log(`doc=${JSON.stringify(message)}`)
+      this.sendResponse(message);
+    });
   }
 
   public getNewQuoteForm() {
@@ -47,6 +59,10 @@ export default class QuoteController {
         {
           "title": "Cytat",
           "text": this.quote
+        },
+        {
+          "title": "request",
+          "text": JSON.stringify(this.req)
         },
         {
           "title": `<@${this.user_id}>, czy przyrzekasz, że powyższy cytat jest prawdziwy i nie spowoduje zanieczyszczenia bazy?`,
@@ -82,8 +98,7 @@ export default class QuoteController {
     return this.dbService.addQuote(quoteObject);
   }
 
-  private getRandomDocument(): ResponseObject {
-    const document = this.dbService.getQuoteDocument();
+  private formatResponseMessage(document): ResponseObject {
     if (document) {
       return {
         response_type: "in_channel",
@@ -107,23 +122,25 @@ export default class QuoteController {
 
   public newQuoteResponse(): ResponseObject {
     const { type, actions, callback_id, user } = this.payload;
-
+    console.log(`this.payload=${JSON.stringify(this.payload)}`)
     if (type === "interactive_message" && callback_id === "addQuote" && actions.length > 0) {
-      let { name: reason, value } = actions[actions.length - 1];
+      console.log(`type=${type} callback_id=${callback_id} actions.length=${actions.length}`)
+      let { name, value } = actions[actions.length - 1];
       let valueObject;
       if (value !== UserResponse.Cancel) {
         valueObject = JSON.parse(value);
         if (!valueObject.author.trim() || !valueObject.quote.trim()) {
-          reason = UserResponse.WrongInput;
+          name = UserResponse.WrongInput;
         }
       }
-      switch (reason) {
+      console.log(`name=${name}`);
+      switch (name) {
         case UserResponse.Accept:
           return {
             "Content-type": "application/json",
             "response_type": "in_channel",
             "replace_original": "true",
-            "text": `<@${this.user_id}> dodaje nowy cytat  *${this.author}*: _"${this.quote}"_`
+            "text": `<@${user.id}> dodaje nowy cytat  *${valueObject.author}*: _"${valueObject.quote}"_`
           };
         case UserResponse.Cancel:
           return {
@@ -171,17 +188,14 @@ export default class QuoteController {
 
   private sendResponse(data: ResponseObject): Boolean {
     let result: Boolean;
-    if (!this.response_url) return;
+    if (!this.response_url) return false;
     axios.post(this.response_url, {
       data: data
-    }).then(function (response) {
+    }).then(() => {
       result = true;
-      console.log(response);
-    })
-    .catch(function (error) {
+    }).catch(() => {
       result = false;
-      console.log(error);
-    });
+    })
     return result;
   }
 }
